@@ -1,0 +1,37 @@
+{
+    "author": {
+        "name": "aelesfer"
+    },
+    "name": "angular-apiservice",
+    "version": "0.0.1",
+    "homepage": "",
+    "repository": "https://github.com/aelesfer/angular-apiservice.git",
+    "keywords": [
+        "rest",
+        "mocks",
+        "resource"
+    ],
+    "main": [
+        "./dist/apiservice.js"
+    ],
+    "ignore": [
+        "**/.*",
+        "bower_components",
+        "*-mock.js",
+        "demo",
+        "mocks",
+        "node_modules",
+        "server",
+        "test",
+        "Gruntfile.js",
+        "package.json",
+        "src"
+    ],
+    "dependencies": {
+        "angular": "~1.4.7"
+    },
+    "private": false,
+    "resolutions": {
+        "angular": "~1.4.7"
+    }
+}
