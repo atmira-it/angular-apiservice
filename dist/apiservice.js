@@ -1,4 +1,4 @@
-/*! angular-apiservice 0.0.1 2017-02-01 */
+/*! angular-apiservice 0.0.1 2017-02-09 */
 /*! */
 /*global angular */
 (function(angular) {
@@ -122,11 +122,11 @@
             }
             return this.$resource.query(params, callback);
         }
-        function _post(params, callback) {
+        function _post(params, bodyParams, callbackOK, callbackKO) {
             if (apiServiceConf.isMockFlag()) {
-                return this.buildMockedApiCall(params, false, callback);
+                return this.buildMockedApiCall(params, false, callbackOK);
             }
-            return this.$resource.post(params, callback);
+            return this.$resource.post(params, bodyParams, callbackOK, callbackKO);
         }
         function _delete(params, callback) {
             if (apiServiceConf.isMockFlag()) {
