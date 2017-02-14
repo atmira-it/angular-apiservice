@@ -1,4 +1,4 @@
-/*! angular-apiservice 0.0.1 2017-02-09 */
+/*! angular-apiservice 0.0.1 2017-02-14 */
 /*! */
 /*global angular */
 (function(angular) {
@@ -43,17 +43,17 @@
     "use strict";
     angular.module("angular.apiservice").factory("ApiService", [ "$resource", "filterFilter", "apiServiceConf", ApiService ]);
     function ApiService($resource, filterFilter, apiServiceConf) {
-        // Service will store different APIs with theyr own HTTP methods.
-        var service = {};
-        // Add to 'service' the different APIs configured in the provider
         var origins = apiServiceConf.getOrigins();
-        angular.forEach(origins, function(address, origin) {
-            service[origin] = configureAPI(origin, address);
+        var service = {};
+        // Service will store different APIs with theyr own HTTP methods.
+        // Add to 'service' the different APIs configured in the provider        
+        angular.forEach(origins, function(originAddress, origin) {
+            service[origin] = configureAPI(origin, originAddress);
         });
         return service;
-        //////////////////////
-        // This method doesn't configure the API, but returns a method that does it
-        function configureAPI(origin, address) {
+        // ================
+        function configureAPI(origin, originAddress) {
+            // The first level of the api is a configuration function
             return function(endPoint, defaultParams, customActions) {
                 var defaultActions = {
                     post: {
@@ -61,78 +61,68 @@
                     }
                 };
                 var actions = angular.extend(defaultActions, customActions);
-                return getConfiguredAPI(origin, address, endPoint, defaultParams, actions);
+                return getApiModel(origin, originAddress, endPoint, defaultParams, actions);
             };
+            // The function returned before, allows to do the REST call's
+            function getApiModel(origin, address, endPoint, defaultParams, customActions) {
+                var url = address + endPoint;
+                var isMock = apiServiceConf.isMockFlag();
+                var resource = isMock ? null : $resource(url, defaultParams, customActions);
+                var ApiModel = {};
+                ApiModel.origin = origin;
+                ApiModel.endPoint = endPoint;
+                ApiModel.$resource = isMock ? $resource : undefined;
+                ApiModel.get = isMock ? mockedResponse : ApiModel.resource.get;
+                ApiModel.post = isMock ? mockedResponse : ApiModel.resource.post;
+                return ApiModel;
+            }
         }
-        function getConfiguredAPI(origin, address, endPoint, defaultParams, customActions) {
-            var configuredAPI = {};
-            configuredAPI.defaultParams = defaultParams;
-            configuredAPI.apiUrl = address + endPoint;
-            configuredAPI.mockUrl = "app/assets/mocks/" + origin + "/" + endPoint + ".json";
-            configuredAPI.$resource = $resource(configuredAPI.apiUrl, defaultParams, customActions);
-            configuredAPI.get = _get;
-            configuredAPI.query = _query;
-            configuredAPI.post = _post;
-            configuredAPI.delete = _delete;
-            configuredAPI.buildMockedApiCall = _buildMockedApiCall;
-            return configuredAPI;
-        }
-        function _buildMockedApiCall(params, isArray, callback) {
-            var url = this.mockUrl;
-            var mockFilter = undefined;
-            var filterParams = {};
-            angular.forEach(params, function(value, param) {
-                if (url.includes(":" + param)) {
-                    url.replace(":" + param, value);
-                } else {
-                    filterParams[param] = value;
-                }
-            });
-            mockFilter = buildMockFilter(filterParams, isArray);
-            return $resource(url, {}, {
-                query: {
-                    method: "GET",
-                    transformResponse: mockFilter,
-                    dataType: "json",
-                    isArray: isArray
-                }
-            }).query(null, callback);
-        }
-        function buildMockFilter(params, isArray) {
-            return function mockFilter(jsonData, headers, status) {
-                var filteredData = {};
-                var data = angular.fromJson(jsonData);
-                filteredData = filterFilter(data, params);
-                if (isArray) {
-                    return filteredData;
-                } else {
-                    return filteredData[0];
-                }
+    }
+    function mockedResponse(params, bodyParams, callbackOK, callbackKO) {
+        var url = "app/assets/mocks/" + this.origin + ".json";
+        this.params = params;
+        this.bodyParams = bodyParams;
+        // TODO: Cambiar esto para que coja los actions correctamente y sus isArray
+        return this.$resource(url, null, {
+            get: {
+                isArray: false,
+                transformResponse: responseFilter.bind(this)
+            }
+        }).get(null, null, callbackOK, callbackKO);
+        // ==============
+        function responseFilter(jsonData, headers, status) {
+            var request = {
+                params: this.params,
+                bodyParams: this.bodyParams
             };
+            var data = dataFromJsonMock(jsonData, this.endPoint);
+            if (data === undefined) throw "No existe mock con estos datos";
+            return responseFromData(data, request);
         }
-        function _get(params, callback) {
-            if (apiServiceConf.isMockFlag()) {
-                return this.buildMockedApiCall(params, false, callback);
+    }
+    function dataFromJsonMock(jsonData, endPoint) {
+        var rawData = angular.fromJson(jsonData);
+        var data = undefined;
+        angular.forEach(rawData, function(element) {
+            if (data === undefined && element.endPoint === endPoint) {
+                data = element;
             }
-            return this.$resource.get(params, callback);
-        }
-        function _query(params, callback) {
-            if (apiServiceConf.isMockFlag()) {
-                return this.buildMockedApiCall(params, true, callback);
+        });
+        return data;
+    }
+    function responseFromData(data, request) {
+        var response = [];
+        angular.forEach(data.data, function(element) {
+            if (data.isArray || response.length === 0) {
+                if (angular.equals(element.request, request)) {
+                    response.push(element.response);
+                }
             }
-            return this.$resource.query(params, callback);
-        }
-        function _post(params, bodyParams, callbackOK, callbackKO) {
-            if (apiServiceConf.isMockFlag()) {
-                return this.buildMockedApiCall(params, false, callbackOK);
-            }
-            return this.$resource.post(params, bodyParams, callbackOK, callbackKO);
-        }
-        function _delete(params, callback) {
-            if (apiServiceConf.isMockFlag()) {
-                return this.buildMockedApiCall(params, false, callback);
-            }
-            return this.$resource.delete(params, callback);
+        });
+        if (data.isArray) {
+            return response;
+        } else {
+            return response[0];
         }
     }
 })(angular);
