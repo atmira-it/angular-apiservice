@@ -31,6 +31,8 @@
                 ApiModel.$resource = isMock ? $resource : undefined;
                 ApiModel.get = isMock ? mockedResponse : ApiModel.resource.get;
                 ApiModel.post = isMock ? mockedResponse : ApiModel.resource.post;
+                ApiModel.query = isMock ? mockedResponse : ApiModel.resource.query;
+                ApiModel.delete = isMock ? mockedResponse : ApiModel.resource.delete;
                 return ApiModel;
             }
         }
@@ -44,8 +46,10 @@
         // TODO: Cambiar esto para que coja los actions correctamente y sus isArray
         return this.$resource(url, null, {get: {isArray: false, transformResponse: responseFilter.bind(this)}}).get(null, null, callbackOK, callbackKO);
         // ==============
-        function responseFilter(jsonData, headers, status) {            
-            var request = {                
+        function responseFilter(jsonData, headers, status) {
+            if (status === '404')
+                throw jsonData;
+            var request = {
                 params: this.params,
                 bodyParams: this.bodyParams
             };
@@ -60,8 +64,8 @@
         var rawData = angular.fromJson(jsonData);
         var data = undefined;
         angular.forEach(rawData, function(element) {
-            if (data === undefined && element.endPoint === endPoint) {                
-                data = element;        
+            if (data === undefined && element.endPoint === endPoint) {
+                data = element;
             }
         });
         return data;

@@ -74,6 +74,8 @@
                 ApiModel.$resource = isMock ? $resource : undefined;
                 ApiModel.get = isMock ? mockedResponse : ApiModel.resource.get;
                 ApiModel.post = isMock ? mockedResponse : ApiModel.resource.post;
+                ApiModel.query = isMock ? mockedResponse : ApiModel.resource.query;
+                ApiModel.delete = isMock ? mockedResponse : ApiModel.resource.delete;
                 return ApiModel;
             }
         }
@@ -91,6 +93,7 @@
         }).get(null, null, callbackOK, callbackKO);
         // ==============
         function responseFilter(jsonData, headers, status) {
+            if (status === "404") throw jsonData;
             var request = {
                 params: this.params,
                 bodyParams: this.bodyParams
