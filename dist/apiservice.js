@@ -1,4 +1,4 @@
-/*! angular-apiservice 0.0.1 2017-02-14 */
+/*! angular-apiservice 0.0.1 2017-02-15 */
 /*! */
 /*global angular */
 (function(angular) {
@@ -72,10 +72,10 @@
                 ApiModel.origin = origin;
                 ApiModel.endPoint = endPoint;
                 ApiModel.$resource = isMock ? $resource : undefined;
-                ApiModel.get = isMock ? mockedResponse : ApiModel.resource.get;
-                ApiModel.post = isMock ? mockedResponse : ApiModel.resource.post;
-                ApiModel.query = isMock ? mockedResponse : ApiModel.resource.query;
-                ApiModel.delete = isMock ? mockedResponse : ApiModel.resource.delete;
+                ApiModel.get = isMock ? mockedResponse : resource.get;
+                ApiModel.post = isMock ? mockedResponse : resource.post;
+                ApiModel.query = isMock ? mockedResponse : resource.query;
+                ApiModel.delete = isMock ? mockedResponse : resource.delete;
                 return ApiModel;
             }
         }
