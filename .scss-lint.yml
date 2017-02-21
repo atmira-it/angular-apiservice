@@ -1,0 +1,5 @@
+linters:
+    VendorPrefix:
+        enabled: false
+    ColorVariable:
+        enabled: false

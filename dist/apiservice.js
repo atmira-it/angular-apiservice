@@ -1,4 +1,4 @@
-/*! angular-apiservice 0.0.1 2017-02-15 */
+/*! angular-apiservice 0.0.1 2017-02-21 */
 /*! */
 /*global angular */
 (function(angular) {
@@ -46,7 +46,7 @@
         var origins = apiServiceConf.getOrigins();
         var service = {};
         // Service will store different APIs with theyr own HTTP methods.
-        // Add to 'service' the different APIs configured in the provider        
+        // Add to 'service' the different APIs configured in the provider
         angular.forEach(origins, function(originAddress, origin) {
             service[origin] = configureAPI(origin, originAddress);
         });
@@ -56,75 +56,112 @@
             // The first level of the api is a configuration function
             return function(endPoint, defaultParams, customActions) {
                 var defaultActions = {
+                    get: {
+                        method: "GET",
+                        isArray: false
+                    },
+                    getAll: {
+                        method: "GET",
+                        isArray: true
+                    },
                     post: {
-                        method: "POST"
+                        method: "POST",
+                        isArray: false
+                    },
+                    query: {
+                        method: "POST",
+                        isArray: true
+                    },
+                    delete: {
+                        method: "DELETE",
+                        isArray: false
                     }
                 };
                 var actions = angular.extend(defaultActions, customActions);
-                return getApiModel(origin, originAddress, endPoint, defaultParams, actions);
+                return getConfiguredResource(endPoint, defaultParams, actions);
             };
             // The function returned before, allows to do the REST call's
-            function getApiModel(origin, address, endPoint, defaultParams, customActions) {
-                var url = address + endPoint;
-                var isMock = apiServiceConf.isMockFlag();
-                var resource = isMock ? null : $resource(url, defaultParams, customActions);
-                var ApiModel = {};
-                ApiModel.origin = origin;
-                ApiModel.endPoint = endPoint;
-                ApiModel.$resource = isMock ? $resource : undefined;
-                ApiModel.get = isMock ? mockedResponse : resource.get;
-                ApiModel.post = isMock ? mockedResponse : resource.post;
-                ApiModel.query = isMock ? mockedResponse : resource.query;
-                ApiModel.delete = isMock ? mockedResponse : resource.delete;
-                return ApiModel;
-            }
-        }
-    }
-    function mockedResponse(params, bodyParams, callbackOK, callbackKO) {
-        var url = "app/assets/mocks/" + this.origin + ".json";
-        this.params = params;
-        this.bodyParams = bodyParams;
-        // TODO: Cambiar esto para que coja los actions correctamente y sus isArray
-        return this.$resource(url, null, {
-            get: {
-                isArray: false,
-                transformResponse: responseFilter.bind(this)
-            }
-        }).get(null, null, callbackOK, callbackKO);
-        // ==============
-        function responseFilter(jsonData, headers, status) {
-            if (status === "404") throw jsonData;
-            var request = {
-                params: this.params,
-                bodyParams: this.bodyParams
-            };
-            var data = dataFromJsonMock(jsonData, this.endPoint);
-            if (data === undefined) throw "No existe mock con estos datos";
-            return responseFromData(data, request);
-        }
-    }
-    function dataFromJsonMock(jsonData, endPoint) {
-        var rawData = angular.fromJson(jsonData);
-        var data = undefined;
-        angular.forEach(rawData, function(element) {
-            if (data === undefined && element.endPoint === endPoint) {
-                data = element;
-            }
-        });
-        return data;
-    }
-    function responseFromData(data, request) {
-        var response = [];
-        angular.forEach(data.data, function(element) {
-            if (data.isArray || response.length === 0) {
-                if (angular.equals(element.request, request)) {
-                    response.push(element.response);
+            function getConfiguredResource(endPoint, defaultParams, actions) {
+                var Resource = {};
+                var api = undefined;
+                Resource.endPoint = endPoint;
+                Resource.defaultParams = defaultParams;
+                if (apiServiceConf.isMockFlag()) {
+                    Resource.url = "app/assets/mocks/" + origin + ".json";
+                    // TODO: Get the prefix path from the conf Provider
+                    angular.forEach(actions, function(action) {
+                        action.method = "GET";
+                        action.transformResponse = returnMock.bind(Resource);
+                    });
+                    api = $resource(Resource.url, null, actions);
+                    angular.forEach(actions, function(object, name) {
+                        Resource[name] = object.isArray ? mockedArrayAction : mockedAction;
+                    });
+                } else {
+                    Resource.url = originAddress + endPoint;
+                    api = $resource(Resource.url, defaultParams, actions);
+                    angular.forEach(actions, function(object, name) {
+                        Resource[name] = api[name];
+                    });
+                }
+                return Resource;
+                // =======================
+                function mockedAction(params, x, y, z) {
+                    this.params = params;
+                    this.bodyParams = angular.isObject(x) ? x : undefined;
+                    var callbackOK = angular.isFunction(x) ? x : y;
+                    var callbackKO = angular.isFunction(x) ? y : z;
+                    return api.get(null, callbackOK, callbackKO);
+                }
+                function mockedArrayAction(params, x, y, z) {
+                    this.params = params;
+                    this.bodyParams = angular.isObject(x) ? x : undefined;
+                    var callbackOK = angular.isFunction(x) ? x : y;
+                    var callbackKO = angular.isFunction(x) ? y : z;
+                    return api.getAll(null, callbackOK, callbackKO);
+                }
+                function returnMock(jsonData, getHeaders, status) {
+                    if (status === "404") {
+                        throw jsonData;
+                    }
+                    var data = dataFromJsonMock(jsonData, this.endPoint);
+                    if (angular.isUndefined(data)) {
+                        throw "No existe mock con estos datos";
+                    }
+                    var request = {};
+                    if (angular.isDefined(this.params) || angular.isDefined(this.defaultParams)) {
+                        request.params = this.params;
+                        angular.extend(request.params, this.defaultParams);
+                    }
+                    if (angular.isDefined(this.bodyParams)) {
+                        request.bodyParams = this.bodyParams;
+                    }
+                    return responseFromData(data, request);
                 }
             }
-        });
-        if (data.isArray) {
-            return response;
-        } else {
+        }
+        function dataFromJsonMock(jsonData, endPoint) {
+            var rawData = angular.fromJson(jsonData);
+            var data = undefined;
+            angular.forEach(rawData, function(element) {
+                if (angular.isUndefined(data) && element.endPoint === endPoint) {
+                    data = element;
+                }
+            });
+            return data;
+        }
+        function responseFromData(data, request) {
+            var response = [];
+            angular.forEach(data.data, function(element) {
+                if (data.isArray || response.length === 0) {
+                    if (angular.equals(element.request, request)) {
+                        response.push(element.response);
+                    }
+                }
+            });
+            // if (data.isArray) {
+            //  return response;
+            // }
             return response[0];
         }
     }
