@@ -121,7 +121,7 @@
                     return api.getAll(null, callbackOK, callbackKO);
                 }
                 function returnMock(jsonData, getHeaders, status) {
-                    if (status === "404") {
+                    if (status === 404) {
                         throw jsonData;
                     }
                     var data = dataFromJsonMock(jsonData, this.endPoint);
