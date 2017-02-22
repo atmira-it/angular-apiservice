@@ -6,12 +6,13 @@ $ npm install
 $ gulp install
 $ grunt build
 ```
+Hay que tener en cuenta que el distribuido que forma la librería se genera con la tarea `grunt build`
 
 ## Instalación como librería:
 
 ```javascript
 // Añadir a bower.json o package.json
-"angular-apiservice": "https://github.com/atmira-it/angular-apiservice.git"
+"angular-apiservice": "https://github.com/atmira-it/angular-apiservice.git"// Recomendado: fijar versión
 
 // Incluir la dependencia en el módulo principal de la aplicación
 angular.module('app', ['ApiService']);
@@ -89,5 +90,11 @@ angular.module('app')
 });
 ```
 
+### Uso de Mocks
+En caso de que se haya configurado en el Provider el flag de Mocks como true, ApiService re-escribirá las peticiones REST y apuntará a los Mocks de la aplicación. Las rutas que consultará tendrán el formato siguiente: ´app/assets/mocks/[origin].json´.
+
+```
+Ejemplo: app/assets/mocks/webflow.json
+``` 
 
 // TODO: Continuar...
