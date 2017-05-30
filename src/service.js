@@ -5,6 +5,9 @@
     function ApiService($resource, filterFilter, apiServiceConf) {
         var origins = apiServiceConf.getOrigins();
         var service = {};
+        service.webflow = function() {
+            console.log('funcion webflow iniciada');
+        };
         // Service will store different APIs with theyr own HTTP methods.
         // Add to 'service' the different APIs configured in the provider
         angular.forEach(origins, function(originAddress, origin) {
